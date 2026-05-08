@@ -186,7 +186,7 @@ http://localhost:8501
 4. Проверить страницу `3_Feature_Engineering`: новые признаки, IQR, PCA, t-SNE.
 5. Проверить страницу `4_Models`: базовые модели и ансамбли.
 6. Проверить страницу `5_Optimization`: K-Fold, Optuna, Early Stopping.
-7. Проверить страницу `6_ClearML`: эксперименты, загрузка модели, inference.
+7. Проверить страницу `6_ClearML`: эксперименты, загрузка модели, локальный inference и кнопку Docker Serving.
 8. Проверить страницу `7_SHAP`: SHAP, LIME, PDP.
 9. Проверить страницу `8_Error_Analysis`: таблица ошибок и интерактивный фильтр.
 
@@ -194,19 +194,49 @@ http://localhost:8501
 
 ## Настройка ClearML
 
-Секреты ClearML нельзя записывать в README, `.env`, код или коммиты. Настройте их локально:
+Перед отправкой датасета, экспериментов и модели в ClearML нужно один раз настроить локальные ключи. Секреты ClearML нельзя записывать в README, `.env`, код или коммиты.
+
+1. Откройте [ClearML Web](https://app.clear.ml/) и войдите в аккаунт.
+2. Перейдите в `Settings` -> `Workspace` и нажмите `Create new credentials`.
+3. Скопируйте блок конфигурации из вкладки `LOCAL PYTHON`.
+4. В активированном виртуальном окружении проекта выполните:
 
 ```powershell
 clearml-init
 ```
 
-После настройки должен появиться файл:
+5. Вставьте скопированный блок конфигурации в мастер `clearml-init`.
+6. После успешной проверки должен появиться файл:
 
-```text
-%USERPROFILE%\clearml.conf
+```powershell
+Test-Path $env:USERPROFILE\clearml.conf
 ```
 
-Запуск ClearML-скриптов:
+Пример структуры `clearml.conf` с плейсхолдерами:
+
+```text
+api {
+  web_server: https://app.clear.ml/
+  api_server: https://api.clear.ml
+  files_server: https://files.clear.ml
+  credentials {
+    "access_key" = "PASTE_ACCESS_KEY_HERE"
+    "secret_key" = "PASTE_SECRET_KEY_HERE"
+  }
+}
+```
+
+Альтернативно ключи можно задать переменными окружения для текущей PowerShell-сессии:
+
+```powershell
+$env:CLEARML_API_ACCESS_KEY = "PASTE_ACCESS_KEY_HERE"
+$env:CLEARML_API_SECRET_KEY = "PASTE_SECRET_KEY_HERE"
+$env:CLEARML_API_HOST = "https://api.clear.ml"
+$env:CLEARML_WEB_HOST = "https://app.clear.ml"
+$env:CLEARML_FILES_HOST = "https://files.clear.ml"
+```
+
+Для этого проекта удобнее использовать файл `%USERPROFILE%\clearml.conf`, потому что он монтируется в Docker-контейнер ClearML Serving. После настройки ключей можно запускать ClearML-скрипты:
 
 ```powershell
 python clearml_scripts/dataset_creation.py
@@ -251,6 +281,8 @@ docker run -d `
 ```powershell
 docker logs --tail 100 clearml_pm_serving
 ```
+
+После запуска контейнера этот же endpoint можно проверить в Streamlit: страница `6_ClearML` -> вкладка `Предсказание (Inference)` -> кнопка `Отправить запрос в Docker Serving`.
 
 Пример запроса из Windows PowerShell:
 

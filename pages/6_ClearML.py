@@ -10,7 +10,9 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 import xgboost as xgb
-import joblib, os
+import joblib
+import os
+import requests
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -269,57 +271,68 @@ with tab3:
     st.subheader("Предсказание стоимости страховой выплаты")
 
     if 'clearml_model' not in st.session_state:
-        st.warning("Сначала загрузите модель на вкладке 'Загрузка модели'.")
+        st.info("Локальный прогноз доступен после загрузки модели. Docker Serving можно проверить отдельно, если контейнер запущен.")
     else:
         st.success(f"Используется модель: "
                    f"{st.session_state.get('clearml_model_name','?')}")
-        st.markdown("Введите данные страхового случая:")
 
-        col1, col2, col3 = st.columns(3)
-        age         = col1.number_input("Возраст (лет)", 18, 80, 35)
-        weekly_pay  = col2.number_input("Недельная зарплата ($)", 100, 5000, 500)
-        initial_est = col3.number_input("Начальная оценка дела ($)", 0, 500000, 5000)
+    st.markdown("Введите данные страхового случая:")
 
-        col4, col5, col6 = st.columns(3)
-        hours_week  = col4.number_input("Часов в неделю", 1, 80, 40)
-        days_week   = col5.number_input("Дней в неделю", 1, 7, 5)
-        gender      = col6.selectbox("Пол", ["M", "F"])
+    col1, col2, col3 = st.columns(3)
+    age         = col1.number_input("Возраст (лет)", 18, 80, 35)
+    weekly_pay  = col2.number_input("Недельная зарплата ($)", 100, 5000, 500)
+    initial_est = col3.number_input("Начальная оценка дела ($)", 0, 500000, 5000)
 
-        col7, col8, col9 = st.columns(3)
-        marital      = col7.selectbox("Семейное положение", ["M", "S", "D", "W"])
-        dep_children = col8.number_input("Детей-иждивенцев", 0, 10, 0)
-        dep_other    = col9.number_input("Других иждивенцев", 0, 10, 0)
+    col4, col5, col6 = st.columns(3)
+    hours_week  = col4.number_input("Часов в неделю", 1, 80, 40)
+    days_week   = col5.number_input("Дней в неделю", 1, 7, 5)
+    gender      = col6.selectbox("Пол", ["M", "F"])
 
-        col10, col11 = st.columns(2)
-        acc_year  = col10.number_input("Год несчастного случая", 1990, 2024, 2010)
-        acc_month = col11.slider("Месяц несчастного случая", 1, 12, 6)
+    col7, col8, col9 = st.columns(3)
+    marital      = col7.selectbox("Семейное положение", ["M", "S", "D", "W"])
+    dep_children = col8.number_input("Детей-иждивенцев", 0, 10, 0)
+    dep_other    = col9.number_input("Других иждивенцев", 0, 10, 0)
 
-        if st.button("Рассчитать прогноз", type="primary", key="btn_predict"):
-            log("Пользователь: запрос предсказания",
-                age=age, weekly_pay=weekly_pay, initial_est=initial_est,
-                hours_week=hours_week, gender=gender, marital=marital,
-                dep_children=dep_children, dep_other=dep_other,
-                acc_year=acc_year, acc_month=acc_month)
+    col10, col11 = st.columns(2)
+    acc_year  = col10.number_input("Год несчастного случая", 1990, 2024, 2010)
+    acc_month = col11.slider("Месяц несчастного случая", 1, 12, 6)
 
-            input_dict = {
-                'Age': age,
-                'Gender': gender,
-                'MaritalStatus': marital,
-                'DependentChildren': dep_children,
-                'DependentsOther': dep_other,
-                'WeeklyPay': weekly_pay,
-                'PartTimeFullTime': 'F' if hours_week >= 35 else 'P',
-                'HoursWorkedPerWeek': hours_week,
-                'DaysWorkedPerWeek': days_week,
-                'InitialCaseEstimate': initial_est,
-                'Accident_Year': acc_year,
-                'Accident_Month': acc_month,
-                'Accident_DayOfWeek': 0,
-                'Reported_Year': acc_year,
-                'Reported_Month': acc_month,
-                'Reported_DayOfWeek': 0,
-                'ReportDelay_Days': 30,
-            }
+    serving_url = st.text_input(
+        "URL Docker Serving",
+        value="http://127.0.0.1:8080/serve/workers_compensation")
+
+    input_dict = {
+        'Age': age,
+        'Gender': gender,
+        'MaritalStatus': marital,
+        'DependentChildren': dep_children,
+        'DependentsOther': dep_other,
+        'WeeklyPay': weekly_pay,
+        'PartTimeFullTime': 'F' if hours_week >= 35 else 'P',
+        'HoursWorkedPerWeek': hours_week,
+        'DaysWorkedPerWeek': days_week,
+        'InitialCaseEstimate': initial_est,
+        'Accident_Year': acc_year,
+        'Accident_Month': acc_month,
+        'Accident_DayOfWeek': 0,
+        'Reported_Year': acc_year,
+        'Reported_Month': acc_month,
+        'Reported_DayOfWeek': 0,
+        'ReportDelay_Days': 30,
+    }
+
+    col_local, col_docker = st.columns(2)
+
+    if col_local.button("Рассчитать локально", type="primary", key="btn_predict"):
+        log("Пользователь: запрос локального предсказания",
+            age=age, weekly_pay=weekly_pay, initial_est=initial_est,
+            hours_week=hours_week, gender=gender, marital=marital,
+            dep_children=dep_children, dep_other=dep_other,
+            acc_year=acc_year, acc_month=acc_month)
+
+        if 'clearml_model' not in st.session_state:
+            st.warning("Сначала загрузите модель на вкладке 'Загрузка модели'.")
+        else:
             input_df = pd.DataFrame([input_dict])
 
             cat_cols = ['Gender', 'MaritalStatus', 'PartTimeFullTime']
@@ -343,7 +356,8 @@ with tab3:
             try:
                 pred_log = st.session_state['clearml_model'].predict(input_df)
                 pred_usd = float(np.expm1(pred_log[0]))
-                log("Предсказание выполнено", pred_usd=round(pred_usd, 2),
+                log("Локальное предсказание выполнено",
+                    pred_usd=round(pred_usd, 2),
                     pred_log=round(float(pred_log[0]), 4))
                 st.metric("Прогнозируемая стоимость выплаты",
                           f"${pred_usd:,.0f}")
@@ -354,5 +368,43 @@ with tab3:
                 else:
                     st.error("Высокозатратный случай — требует особого внимания!")
             except Exception as e:
-                log("Ошибка предсказания", level="ERROR", error=str(e))
+                log("Ошибка локального предсказания", level="ERROR", error=str(e))
                 st.error(f"Ошибка предсказания: {e}")
+
+    if col_docker.button("Отправить запрос в Docker Serving",
+                         key="btn_docker_serving"):
+        log("Пользователь: запрос в Docker Serving",
+            serving_url=serving_url, age=age, weekly_pay=weekly_pay,
+            initial_est=initial_est)
+
+        try:
+            with st.spinner("Отправка запроса в Docker Serving..."):
+                response = requests.post(
+                    serving_url.strip(),
+                    json=input_dict,
+                    timeout=30)
+                response.raise_for_status()
+
+            try:
+                result = response.json()
+            except ValueError:
+                result = {"raw_response": response.text}
+
+            log("Ответ Docker Serving получен",
+                status_code=response.status_code, result=str(result)[:500])
+
+            pred_usd = result.get("predicted_cost_usd") \
+                if isinstance(result, dict) else None
+            if pred_usd is not None:
+                st.metric("Прогноз Docker Serving", f"${float(pred_usd):,.0f}")
+            st.success("Ответ от Docker Serving получен.")
+            st.json(result)
+        except requests.exceptions.ConnectionError as e:
+            log("Docker Serving недоступен", level="ERROR", error=str(e))
+            st.error("Docker Serving недоступен. Проверьте, что контейнер запущен и порт 8080 открыт.")
+        except requests.exceptions.Timeout as e:
+            log("Таймаут Docker Serving", level="ERROR", error=str(e))
+            st.error("Docker Serving не ответил за 30 секунд.")
+        except requests.exceptions.RequestException as e:
+            log("Ошибка запроса Docker Serving", level="ERROR", error=str(e))
+            st.error(f"Ошибка запроса Docker Serving: {e}")
