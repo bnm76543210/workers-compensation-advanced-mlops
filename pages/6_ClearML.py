@@ -401,7 +401,7 @@ with tab3:
             st.json(result)
         except requests.exceptions.ConnectionError as e:
             log("Docker Serving недоступен", level="ERROR", error=str(e))
-            st.error("Docker Serving недоступен. Проверьте, что контейнер запущен и порт 8080 открыт.")
+            st.error("Docker Serving недоступен или еще запускается. Проверьте контейнер и дождитесь в логах строки 'Starting Uvicorn server - single worker'.")
         except requests.exceptions.Timeout as e:
             log("Таймаут Docker Serving", level="ERROR", error=str(e))
             st.error("Docker Serving не ответил за 30 секунд.")

@@ -282,6 +282,12 @@ docker run -d `
 docker logs --tail 100 clearml_pm_serving
 ```
 
+Первый запуск может занять несколько минут: контейнер устанавливает Python-зависимости. Запросы нужно отправлять только после появления в логах строки:
+
+```text
+Starting Uvicorn server - single worker
+```
+
 После запуска контейнера этот же endpoint можно проверить в Streamlit: страница `6_ClearML` -> вкладка `Предсказание (Inference)` -> кнопка `Отправить запрос в Docker Serving`.
 
 Пример запроса из Windows PowerShell:
