@@ -20,6 +20,9 @@ from src.data_loader import load_data
 from src.preprocessing import preprocess, feature_engineering
 from src.logger import log
 
+SERVING_MODEL_ID = "c69c03966cad4898bcc6cdd8de3d61db"
+SERVING_LOCAL_MODEL = "XGBoost.pkl"
+
 st.set_page_config(page_title="ClearML", layout="wide")
 st.title("ClearML — Управление экспериментами и деплой")
 
@@ -212,11 +215,15 @@ with tab2:
     Скопируйте **Model ID** из ClearML Web → Models и вставьте ниже.
 
     **Зарегистрированная модель (XGBoost):** `c69c03966cad4898bcc6cdd8de3d61db`
+
+    Docker Serving сейчас использует эту же модель. Для одинакового сравнения
+    с локальным прогнозом выберите локальный файл `XGBoost.pkl` или загрузите
+    модель по указанному Model ID.
     """)
 
     model_id = st.text_input(
         "ID модели из ClearML",
-        value="c69c03966cad4898bcc6cdd8de3d61db",
+        value=SERVING_MODEL_ID,
         placeholder="Введите Model ID из https://app.clear.ml")
 
     if st.button("Загрузить модель из ClearML", key="btn_load_model"):
@@ -244,7 +251,16 @@ with tab2:
     pkl_files = [f for f in os.listdir("models") if f.endswith(".pkl")] \
         if os.path.exists("models") else []
     if pkl_files:
-        selected_pkl = st.selectbox("Выберите локальный файл модели:", pkl_files)
+        pkl_files = sorted(pkl_files)
+        default_index = pkl_files.index(SERVING_LOCAL_MODEL) \
+            if SERVING_LOCAL_MODEL in pkl_files else 0
+        selected_pkl = st.selectbox(
+            "Выберите локальный файл модели:",
+            pkl_files,
+            index=default_index,
+            help=("Для совпадения с Docker Serving выберите "
+                  f"{SERVING_LOCAL_MODEL}. Другие .pkl модели обучены иначе "
+                  "и могут давать другой прогноз."))
         if st.button("Загрузить локальную модель", key="btn_load_local"):
             log("Пользователь: загрузка локальной модели", file=selected_pkl)
             loaded = joblib.load(f"models/{selected_pkl}")
@@ -300,6 +316,10 @@ with tab3:
     serving_url = st.text_input(
         "URL Docker Serving",
         value="http://127.0.0.1:8080/serve/workers_compensation")
+    st.caption(
+        f"Docker Serving настроен на Model ID `{SERVING_MODEL_ID}`. "
+        f"Для одинакового результата локально используйте `{SERVING_LOCAL_MODEL}` "
+        "или ту же модель из ClearML.")
 
     input_dict = {
         'Age': age,

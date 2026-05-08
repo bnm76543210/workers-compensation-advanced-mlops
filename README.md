@@ -290,6 +290,8 @@ Starting Uvicorn server - single worker
 
 После запуска контейнера этот же endpoint можно проверить в Streamlit: страница `6_ClearML` -> вкладка `Предсказание (Inference)` -> кнопка `Отправить запрос в Docker Serving`.
 
+Важно: локальный прогноз и Docker Serving совпадают только при использовании одной и той же модели. Текущий Docker endpoint настроен на ClearML Model ID `c69c03966cad4898bcc6cdd8de3d61db`, который соответствует локальному файлу `XGBoost.pkl`. Если локально выбрать `XGBoost_optimized.pkl`, `CatBoost.pkl` или другую модель, прогноз при тех же входных параметрах будет отличаться.
+
 Пример запроса из Windows PowerShell:
 
 ```powershell
