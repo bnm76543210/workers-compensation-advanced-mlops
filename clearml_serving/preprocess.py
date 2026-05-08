@@ -17,11 +17,7 @@ FEATURE_ORDER = [
 ]
 
 
-def preprocess(data: dict) -> dict:
-    """
-    Input: raw dict from HTTP request
-    Output: dict with 'input' key containing feature array
-    """
+def _prepare_features(data: dict) -> list:
     df = pd.DataFrame([data])
 
     # Encode categorical
@@ -49,7 +45,32 @@ def preprocess(data: dict) -> dict:
         if col not in df.columns:
             df[col] = 0
 
-    return {"input": df[FEATURE_ORDER].values.tolist()}
+    return df[FEATURE_ORDER].values.tolist()
+
+
+class Preprocess:
+    """ClearML Serving 1.3.x custom preprocess interface."""
+
+    def preprocess(self, request: dict, state: dict, collect_custom_statistics_fn=None):
+        return _prepare_features(request)
+
+    def postprocess(self, data, state: dict, collect_custom_statistics_fn=None) -> dict:
+        pred = data
+        if hasattr(pred, "tolist"):
+            pred = pred.tolist()
+        if isinstance(pred, list):
+            pred = pred[0]
+        pred_usd = float(np.expm1(pred))
+        return {"predicted_cost_usd": round(pred_usd, 2)}
+
+
+def preprocess(data: dict) -> dict:
+    """
+    Backward-compatible helper for direct local tests.
+    Input: raw dict from HTTP request
+    Output: dict with 'input' key containing feature array
+    """
+    return {"input": _prepare_features(data)}
 
 
 def postprocess(data: dict) -> dict:
