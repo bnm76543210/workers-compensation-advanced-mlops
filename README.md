@@ -252,12 +252,34 @@ docker run -d `
 docker logs --tail 100 clearml_pm_serving
 ```
 
-Пример запроса:
+Пример запроса из Windows PowerShell:
 
 ```powershell
-curl.exe -X POST "http://127.0.0.1:8080/serve/workers_compensation" `
-  -H "Content-Type: application/json" `
-  -d "{\"Age\":35,\"WeeklyPay\":500,\"InitialCaseEstimate\":5000,\"HoursWorkedPerWeek\":40,\"DaysWorkedPerWeek\":5,\"Gender\":\"M\",\"MaritalStatus\":\"S\",\"DependentChildren\":0,\"DependentsOther\":0,\"PartTimeFullTime\":\"F\",\"Accident_Year\":2010,\"Accident_Month\":6,\"Accident_DayOfWeek\":2,\"Reported_Year\":2010,\"Reported_Month\":7,\"Reported_DayOfWeek\":1,\"ReportDelay_Days\":30}"
+$body = @{
+  Age = 35
+  WeeklyPay = 500
+  InitialCaseEstimate = 5000
+  HoursWorkedPerWeek = 40
+  DaysWorkedPerWeek = 5
+  Gender = "M"
+  MaritalStatus = "S"
+  DependentChildren = 0
+  DependentsOther = 0
+  PartTimeFullTime = "F"
+  Accident_Year = 2010
+  Accident_Month = 6
+  Accident_DayOfWeek = 2
+  Reported_Year = 2010
+  Reported_Month = 7
+  Reported_DayOfWeek = 1
+  ReportDelay_Days = 30
+} | ConvertTo-Json -Compress
+
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:8080/serve/workers_compensation" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $body
 ```
 
 ## Технический стек
