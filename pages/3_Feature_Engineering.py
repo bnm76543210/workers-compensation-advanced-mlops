@@ -5,6 +5,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import inspect
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.decomposition import PCA
@@ -177,8 +178,14 @@ if st.button("Запустить t-SNE", type="primary", key="btn_tsne"):
         pre_pca = PCA(n_components=min(30, X_scaled.shape[1]),
                       random_state=42)
         X_pre = pre_pca.fit_transform(X_scaled[idx_tsne])
-        tsne = TSNE(n_components=2, random_state=42,
-                    perplexity=30, n_iter=500)
+        tsne_params = {
+            "n_components": 2,
+            "random_state": 42,
+            "perplexity": 30,
+        }
+        iter_param = "max_iter" if "max_iter" in inspect.signature(TSNE).parameters else "n_iter"
+        tsne_params[iter_param] = 500
+        tsne = TSNE(**tsne_params)
         emb = tsne.fit_transform(X_pre)
 
     y_color = np.log1p(df_fe[target].values[idx_tsne])
